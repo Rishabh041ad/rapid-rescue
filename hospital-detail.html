@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hospital Details</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f4f9;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5em;
+      color: #333;
+      margin-top: 40px;
+    }
+
+    .hospital-detail {
+      width: 80%;
+      max-width: 900px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    .hospital-detail h3 {
+      font-size: 2.5em;
+      margin-bottom: 15px;
+      color: #5b5bdf;
+    }
+
+    .hospital-detail p {
+      font-size: 1.2em;
+      line-height: 1.5;
+      margin: 10px 0;
+    }
+
+    .hospital-detail .details-list {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .hospital-detail .details-list li {
+      margin: 8px 0;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 1em;
+      color: #fff;
+      background-color: #333;
+      padding: 10px;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Hospital Details</h1>
+  <div id="hospital-detail" class="hospital-detail">Loading...</div>
+
+  <footer>
+    <p>&copy; 73,78,95 Accident Alert System | All Rights Reserved</p>
+  </footer>
+
+  <script>
+    // Get the hospital ID from the URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const hospitalId = urlParams.get('id');
+    const hospitalDetailDiv = document.getElementById('hospital-detail');
+
+    // Fetch data for the specific hospital (use the Overpass API or your custom endpoint)
+    const hospitalDetailUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node(${hospitalId});out;`;
+
+    fetch(hospitalDetailUrl)
+      .then(response => response.json())
+      .then(data => {
+        const hospital = data.elements[0];
+        const name = hospital.tags?.name || 'Unknown Hospital';
+        const address = hospital.tags?.['addr:full'] || 'Not Available';
+        const phone = hospital.tags?.['contact:phone'] || 'Not Available';
+        const description = hospital.tags?.description || 'No description available.';
+        const amenity = hospital.tags?.amenity || 'Not Available';
+
+        hospitalDetailDiv.innerHTML = `
+          <h3>${name}</h3>
+          <ul class="details-list">
+            <li><strong>Address:</strong> ${address}</li>
+            <li><strong>Phone:</strong> ${phone}</li>
+            <li><strong>Amenity:</strong> ${amenity}</li>
+            <li><strong>Description:</strong> ${description}</li>
+          </ul>
+        `;
+      })
+      .catch(error => {
+        hospitalDetailDiv.innerText = 'Error fetching data. Please try again later.';
+        console.error('Error:', error);
+      });
+  </script>
+</body>
+</html>

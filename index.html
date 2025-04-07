@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nearby Hospitals</title>
+  <style>
+    /* Global Styles */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, hsl(65, 67%, 62%), rgb(5, 230, 80));
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5em;
+      color: #fff;
+      margin-top: 40px;
+      text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Container for hospital list using Grid Layout */
+    #hospital-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    /* Individual Hospital Card */
+    .hospital {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      height: 340px;
+      padding: 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      overflow: hidden;
+    }
+
+    .hospital:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .hospital h3 {
+      font-size: 1.8em;
+      color: #333;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .hospital p {
+      font-size: 1.1em;
+      margin: 5px 0;
+      line-height: 1.5;
+    }
+
+    .hospital p strong {
+      color: #5b5bdf;
+    }
+
+    /* View More Button */
+    .view-more {
+      background-color: rgb(92, 114, 222);
+      color: #fff;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 20px; /* Space between content and button */
+      transition: background-color 0.3s ease;
+      width: 100%; /* Full width button inside the card */
+    }
+
+    .view-more:hover {
+      background-color: #4a4adf;
+    }
+
+    /* Loading text */
+    #hospital-list {
+      font-size: 1.2em;
+      color: #fff;
+      font-style: italic;
+    }
+
+    #x {
+      color: #4a4adf;
+    }
+
+    /* Footer Styles */
+    footer {
+      text-align: center;
+      font-size: 1em;
+      color: #fff;
+      padding: 20px;
+      margin-top: 50px;
+      background-color: #333;
+    }
+
+    /* Media Queries for Responsiveness */
+    @media (max-width: 1024px) {
+      #hospital-list {
+        grid-template-columns: repeat(2, 1fr); /* 2 cards per row */
+      }
+    }
+
+    @media (max-width: 600px) {
+      #hospital-list {
+        grid-template-columns: 1fr; /* 1 card per row */
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>73,78,95 ACCIDENT ALERT SYSTEM</h1>
+  <center><h2>Nearby Hospitals</h2></center>
+  <div id="hospital-list">Loading...</div>
+
+  <footer>
+    <p>&copy; 73,78,95 Accident Alert System | All Rights Reserved</p>
+  </footer>
+
+  <script>
+    // Function to get query parameters from the URL
+    function getQueryParams() {
+      const params = new URLSearchParams(window.location.search);
+      const lat = parseFloat(params.get('lat'));
+      const lon = parseFloat(params.get('lon'));
+      return { lat, lon };
+    }
+
+    // Get latitude and longitude from query parameters
+    const { lat: accidentLatitude, lon: accidentLongitude } = getQueryParams();
+
+    // URL to the Overpass API request (use the same URL printed by your Arduino)
+    const url = `https://overpass-api.de/api/interpreter?data=[out:json];node["amenity"="hospital"](${accidentLatitude - 0.1},${accidentLongitude - 0.1},${accidentLatitude + 0.1},${accidentLongitude + 0.1});out;`;
+
+    // Haversine formula to calculate distance between two lat/long points
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Radius of the Earth in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // Distance in km
+    }
+
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        const hospitals = data.elements;
+        const hospitalList = document.getElementById('hospital-list');
+        hospitalList.innerHTML = ''; // Clear the loading text
+
+        // Create an array to store hospitals with their distances
+        const hospitalDistances = [];
+
+        hospitals.forEach(hospital => {
+          const name = hospital.tags?.name || 'Unknown Hospital';
+          const lat = hospital.lat;
+          const lon = hospital.lon;
+          
+          // Ensure the coordinates exist before calculating the distance
+          if (lat && lon) {
+            const distance = calculateDistance(accidentLatitude, accidentLongitude, lat, lon).toFixed(2);
+            hospitalDistances.push({ name, distance, lat, lon, id: hospital.id });
+          }
+        });
+
+        // Sort hospitals by distance in ascending order
+        hospitalDistances.sort((a, b) => a.distance - b.distance);
+
+        // Render hospitals in sorted order
+        hospitalDistances.forEach(hospital => {
+          const hospitalDiv = document.createElement('div');
+          hospitalDiv.classList.add('hospital');
+          hospitalDiv.innerHTML = `
+            <h3>${hospital.name}</h3>
+            <p id="x">Distance from accident spot: <strong>${hospital.distance}</strong> km</p>
+            <a href="hospital-detail.html?id=${hospital.id}" class="view-more">View More</a>
+          `;
+          hospitalList.appendChild(hospitalDiv);
+        });
+      })
+      .catch(error => {
+        document.getElementById('hospital-list').innerText = 'Error fetching data. Please try again later.';
+        console.error('Error:', error);
+      });
+  </script>
+</body>
+</html>
